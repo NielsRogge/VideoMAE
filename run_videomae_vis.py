@@ -187,7 +187,7 @@ def main(args):
         std = torch.as_tensor(IMAGENET_DEFAULT_STD).to(device)[None, :, None, None, None]
         unnorm_videos = img * std + mean  # in [0, 1]
 
-        normlize_target = True
+        normlize_target = False
         patch_size = 16
         if normlize_target:
             videos_squeeze = rearrange(unnorm_videos, 'b c (t p0) (h p1) (w p2) -> b (t h w) (p0 p1 p2) c', p0=2, p1=patch_size, p2=patch_size)

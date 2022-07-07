@@ -174,6 +174,8 @@ def main(args):
         
         outputs = model(img, bool_masked_pos)
 
+        print("Shape of outputs:", outputs.shape)
+
         #save original video
         mean = torch.as_tensor(IMAGENET_DEFAULT_MEAN).to(device)[None, :, None, None, None]
         std = torch.as_tensor(IMAGENET_DEFAULT_STD).to(device)[None, :, None, None, None]

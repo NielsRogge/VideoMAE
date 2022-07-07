@@ -18,8 +18,9 @@ from torchvision import transforms
 from transforms import *
 from masking_generator import  TubeMaskingGenerator
 
-from huggingface_hub import hf_hub_download
+from huggingface_hub import hf_hub_download, CommitOperationAdd, HfApi
 from transformers import VideoMAEFeatureExtractor
+
 
 class DataAugmentationForVideoMAE(object):
     def __init__(self, args):
@@ -171,6 +172,14 @@ def main(args):
         
         print("Shape of image:", img.shape)
         print("Shape of bool_masked_pos:", bool_masked_pos.shape)
+
+        print("Saving and uploading bool_masked_pos:")
+        torch.save(bool_masked_pos, "bool_masked_pos.pt")
+        api = HfApi()
+        operations = [
+            CommitOperationAdd(path_in_repo="bool_masked_pos.pt", path_or_fileobj="./bool_masked_pos.pt"),
+        ]
+        api.create_commit(repo_id="nielsr/bool-masked-pos", operations=operations, commit_message="Upload bool_masked_pos.pt")
         
         outputs = model(img, bool_masked_pos)
 

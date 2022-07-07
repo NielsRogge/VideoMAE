@@ -207,6 +207,8 @@ def main(args):
         print("Loss:", loss.item())
 
         #save original video
+        # fix patch_size again
+        patch_size = model.encoder.patch_embed.patch_size
         mean = torch.as_tensor(IMAGENET_DEFAULT_MEAN).to(device)[None, :, None, None, None]
         std = torch.as_tensor(IMAGENET_DEFAULT_STD).to(device)[None, :, None, None, None]
         ori_img = img * std + mean  # in [0, 1]

@@ -51,7 +51,7 @@ class DataAugmentationForVideoMAE(object):
 
 def get_args():
     parser = argparse.ArgumentParser('VideoMAE visualization reconstruction script', add_help=False)
-    parser.add_argument('img_path', type=str, help='input video path')
+    # parser.add_argument('img_path', type=str, help='input video path')
     parser.add_argument('save_path', type=str, help='save video path')
     parser.add_argument('model_path', type=str, help='checkpoint path of model')
     parser.add_argument('--mask_type', default='random', choices=['random', 'tube'],
@@ -109,34 +109,36 @@ def main(args):
     if args.save_path:
         Path(args.save_path).mkdir(parents=True, exist_ok=True)
 
-    with open(args.img_path, 'rb') as f:
-        vr = VideoReader(f, ctx=cpu(0))
-    duration = len(vr)
-    new_length  = 1 
-    new_step = 1
-    skip_length = new_length * new_step
-    # frame_id_list = [1, 5, 9, 13, 17, 21, 25, 29, 33, 37, 41, 45, 49, 53, 57, 61]
+    ## COMMENTED OUT
+    
+    # with open(args.img_path, 'rb') as f:
+    #     vr = VideoReader(f, ctx=cpu(0))
+    # duration = len(vr)
+    # new_length  = 1 
+    # new_step = 1
+    # skip_length = new_length * new_step
+    # # frame_id_list = [1, 5, 9, 13, 17, 21, 25, 29, 33, 37, 41, 45, 49, 53, 57, 61]
 
     
-    tmp = np.arange(0,32, 2) + 60
-    frame_id_list = tmp.tolist()
-    # average_duration = (duration - skip_length + 1) // args.num_frames
-    # if average_duration > 0:
-    #     frame_id_list = np.multiply(list(range(args.num_frames)),
-    #                             average_duration)
-    #     frame_id_list = frame_id_list + np.random.randint(average_duration,
-    #                                             size=args.num_frames)
+    # tmp = np.arange(0,32, 2) + 60
+    # frame_id_list = tmp.tolist()
+    # # average_duration = (duration - skip_length + 1) // args.num_frames
+    # # if average_duration > 0:
+    # #     frame_id_list = np.multiply(list(range(args.num_frames)),
+    # #                             average_duration)
+    # #     frame_id_list = frame_id_list + np.random.randint(average_duration,
+    # #                                             size=args.num_frames)
 
-    video_data = vr.get_batch(frame_id_list).asnumpy()
-    print(video_data.shape)
-    img = [Image.fromarray(video_data[vid, :, :, :]).convert('RGB') for vid, _ in enumerate(frame_id_list)]
+    # video_data = vr.get_batch(frame_id_list).asnumpy()
+    # print(video_data.shape)
+    # img = [Image.fromarray(video_data[vid, :, :, :]).convert('RGB') for vid, _ in enumerate(frame_id_list)]
 
-    transforms = DataAugmentationForVideoMAE(args)
-    img, bool_masked_pos = transforms((img, None)) # T*C,H,W
-    # print(img.shape)
-    img = img.view((args.num_frames , 3) + img.size()[-2:]).transpose(0,1) # T*C,H,W -> T,C,H,W -> C,T,H,W
-    # img = img.view(( -1 , args.num_frames) + img.size()[-2:]) 
-    bool_masked_pos = torch.from_numpy(bool_masked_pos)
+    # transforms = DataAugmentationForVideoMAE(args)
+    # img, bool_masked_pos = transforms((img, None)) # T*C,H,W
+    # # print(img.shape)
+    # img = img.view((args.num_frames , 3) + img.size()[-2:]).transpose(0,1) # T*C,H,W -> T,C,H,W -> C,T,H,W
+    # # img = img.view(( -1 , args.num_frames) + img.size()[-2:]) 
+    # bool_masked_pos = torch.from_numpy(bool_masked_pos)
 
     # hack: use spaghetti video
     def prepare_video():
@@ -146,11 +148,13 @@ def main(args):
 
     feature_extractor = VideoMAEFeatureExtractor()
     video = prepare_video()
+    frame_id_list = [164, 168, 172, 176, 181, 185, 189, 193, 198, 202, 206, 210, 215, 219, 223, 227]
     img = feature_extractor(video, return_tensors="pt").pixel_values
 
     # create boolean mask
     masked_position_generator = TubeMaskingGenerator(args.window_size, args.mask_ratio)
     bool_masked_pos = masked_position_generator()
+    bool_masked_pos = torch.from_numpy(bool_masked_pos).unsqueeze(0)
    
     with torch.no_grad():
         # img = img[None, :]
@@ -161,8 +165,6 @@ def main(args):
         
         img = img.to(device, non_blocking=True)
         bool_masked_pos = bool_masked_pos.to(device, non_blocking=True).flatten(1).to(torch.bool)
-        
-        bool_masked_pos = bool_masked_pos.unsqueeze(0)
         
         print("Shape of image:", img.shape)
         print("Shape of bool_masked_pos:", bool_masked_pos.shape)

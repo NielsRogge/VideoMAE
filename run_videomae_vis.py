@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import argparse
+from xmlrpc.client import boolean
 import numpy as np
 import torch
 import torch.backends.cudnn as cudnn
@@ -16,6 +17,9 @@ from decord import VideoReader, cpu
 from torchvision import transforms
 from transforms import *
 from masking_generator import  TubeMaskingGenerator
+
+from huggingface_hub import hf_hub_download
+from transformers import VideoMAEFeatureExtractor
 
 class DataAugmentationForVideoMAE(object):
     def __init__(self, args):
@@ -134,15 +138,35 @@ def main(args):
     # img = img.view(( -1 , args.num_frames) + img.size()[-2:]) 
     bool_masked_pos = torch.from_numpy(bool_masked_pos)
 
+    # hack: use spaghetti video
+    def prepare_video():
+        file = hf_hub_download(repo_id="datasets/hf-internal-testing/spaghetti-video", filename="eating_spaghetti.npy")
+        video = np.load(file)
+        return list(video)
+
+    feature_extractor = VideoMAEFeatureExtractor()
+    video = prepare_video()
+    img = feature_extractor(video, return_tensors="pt").pixel_values
+
+    # create boolean mask
+    masked_position_generator = TubeMaskingGenerator(args.window_size, args.mask_ratio)
+    bool_masked_pos = masked_position_generator()
+   
     with torch.no_grad():
         # img = img[None, :]
         # bool_masked_pos = bool_masked_pos[None, :]
-        img = img.unsqueeze(0)
-        print(img.shape)
-        bool_masked_pos = bool_masked_pos.unsqueeze(0)
+        # img = img.unsqueeze(0)
+        # print(img.shape)
+        # bool_masked_pos = bool_masked_pos.unsqueeze(0)
         
         img = img.to(device, non_blocking=True)
         bool_masked_pos = bool_masked_pos.to(device, non_blocking=True).flatten(1).to(torch.bool)
+        
+        bool_masked_pos = bool_masked_pos.unsqueeze(0)
+        
+        print("Shape of image:", img.shape)
+        print("Shape of bool_masked_pos:", bool_masked_pos.shape)
+        
         outputs = model(img, bool_masked_pos)
 
         #save original video

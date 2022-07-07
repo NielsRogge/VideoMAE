@@ -143,8 +143,8 @@ def main(args):
 
     # hack: use spaghetti video
     def prepare_video():
-        file = hf_hub_download(repo_id="datasets/hf-internal-testing/spaghetti-video", filename="eating_spaghetti.npy")
-        video = np.load(file)
+        path = hf_hub_download(repo_id="datasets/hf-internal-testing/spaghetti-video", filename="eating_spaghetti.npy")
+        video = np.load(path)
         return list(video)
 
     feature_extractor = VideoMAEFeatureExtractor()
@@ -156,9 +156,11 @@ def main(args):
     img = torch.moveaxis(img, 1, 2)
 
     # create boolean mask
-    masked_position_generator = TubeMaskingGenerator(args.window_size, args.mask_ratio)
-    bool_masked_pos = masked_position_generator()
-    bool_masked_pos = torch.from_numpy(bool_masked_pos).unsqueeze(0)
+    #masked_position_generator = TubeMaskingGenerator(args.window_size, args.mask_ratio)
+    #bool_masked_pos = masked_position_generator()
+    #bool_masked_pos = torch.from_numpy(bool_masked_pos).unsqueeze(0)
+    local_path = hf_hub_download(repo_id="nielsr/bool-masked-pos", filename="bool_masked_pos.pt")
+    bool_masked_pos = torch.load(local_path)
    
     with torch.no_grad():
         # img = img[None, :]
@@ -172,14 +174,6 @@ def main(args):
         
         print("Shape of image:", img.shape)
         print("Shape of bool_masked_pos:", bool_masked_pos.shape)
-
-        print("Saving and uploading bool_masked_pos:")
-        torch.save(bool_masked_pos, "bool_masked_pos.pt")
-        api = HfApi()
-        operations = [
-            CommitOperationAdd(path_in_repo="bool_masked_pos.pt", path_or_fileobj="./bool_masked_pos.pt"),
-        ]
-        api.create_commit(repo_id="nielsr/bool-masked-pos", operations=operations, commit_message="Upload bool_masked_pos.pt")
         
         outputs = model(img, bool_masked_pos)
 

@@ -151,6 +151,9 @@ def main(args):
     frame_id_list = [164, 168, 172, 176, 181, 185, 189, 193, 198, 202, 206, 210, 215, 219, 223, 227]
     img = feature_extractor(video, return_tensors="pt").pixel_values
 
+    # feature extractor creates img of shape (B, T, C, H, W) => model expects (B, C, T, H, W)
+    img = torch.moveaxis(img, 1, 2)
+
     # create boolean mask
     masked_position_generator = TubeMaskingGenerator(args.window_size, args.mask_ratio)
     bool_masked_pos = masked_position_generator()

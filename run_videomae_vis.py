@@ -4,6 +4,7 @@ from xmlrpc.client import boolean
 import numpy as np
 import torch
 import torch.backends.cudnn as cudnn
+from torch import nn
 from PIL import Image
 from pathlib import Path
 from timm.models import create_model
@@ -179,6 +180,30 @@ def main(args):
 
         print("Shape of outputs:", outputs.shape)
         print("First values of outputs:", outputs[0, :3, :3])
+
+        # verify loss computation
+        # calculate the predict label
+        mean = torch.as_tensor(IMAGENET_DEFAULT_MEAN).to(device)[None, :, None, None, None]
+        std = torch.as_tensor(IMAGENET_DEFAULT_STD).to(device)[None, :, None, None, None]
+        unnorm_videos = img * std + mean  # in [0, 1]
+
+        normlize_target = True
+        if normlize_target:
+            videos_squeeze = rearrange(unnorm_videos, 'b c (t p0) (h p1) (w p2) -> b (t h w) (p0 p1 p2) c', p0=2, p1=patch_size, p2=patch_size)
+            videos_norm = (videos_squeeze - videos_squeeze.mean(dim=-2, keepdim=True)
+                ) / (videos_squeeze.var(dim=-2, unbiased=True, keepdim=True).sqrt() + 1e-6)
+            # we find that the mean is about 0.48 and standard deviation is about 0.08.
+            videos_patch = rearrange(videos_norm, 'b n p c -> b n (p c)')
+        else:
+            videos_patch = rearrange(unnorm_videos, 'b c (t p0) (h p1) (w p2) -> b (t h w) (p0 p1 p2 c)', p0=2, p1=patch_size, p2=patch_size)
+
+        B, _, C = videos_patch.shape
+        labels = videos_patch[bool_masked_pos].reshape(B, -1, C)
+        
+        loss_func = nn.MSELoss()
+        loss = loss_func(input=outputs, target=labels)
+
+        print("Loss:", loss.item())
 
         #save original video
         mean = torch.as_tensor(IMAGENET_DEFAULT_MEAN).to(device)[None, :, None, None, None]

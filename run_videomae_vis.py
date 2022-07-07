@@ -188,6 +188,7 @@ def main(args):
         unnorm_videos = img * std + mean  # in [0, 1]
 
         normlize_target = True
+        patch_size = 16
         if normlize_target:
             videos_squeeze = rearrange(unnorm_videos, 'b c (t p0) (h p1) (w p2) -> b (t h w) (p0 p1 p2) c', p0=2, p1=patch_size, p2=patch_size)
             videos_norm = (videos_squeeze - videos_squeeze.mean(dim=-2, keepdim=True)

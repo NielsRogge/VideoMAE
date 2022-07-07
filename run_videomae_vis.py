@@ -178,6 +178,7 @@ def main(args):
         outputs = model(img, bool_masked_pos)
 
         print("Shape of outputs:", outputs.shape)
+        print("First values of outputs:", outputs[0, :3, :3])
 
         #save original video
         mean = torch.as_tensor(IMAGENET_DEFAULT_MEAN).to(device)[None, :, None, None, None]
